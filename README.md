@@ -14342,4 +14342,51 @@ export default CreateCabinForm;
 
 
 
-Part 2
+Basic React.memo Example
+
+React.memo is used to prevent unnecessary re-renders of a functional component when its props haven’t changed.
+
+Child component (memoized)
+import React from "react";
+
+const Child = React.memo(function Child({ value }) {
+  console.log("Child rendered");
+  return <div>Value: {value}</div>;
+});
+
+export default Child;
+
+Parent component
+import React, { useState } from "react";
+import Child from "./Child";
+
+function Parent() {
+  const [count, setCount] = useState(0);
+  const [text, setText] = useState("");
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>
+        Increment Count ({count})
+      </button>
+
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Type something"
+      />
+
+      <Child value={count} />
+    </div>
+  );
+}
+
+export default Parent;
+
+What happens?
+
+Typing in the input re-renders Parent
+
+Child does NOT re-render unless value changes
+
+Clicking the button changes count, so Child re-renders

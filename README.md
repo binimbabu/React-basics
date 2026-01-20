@@ -6930,6 +6930,59 @@ A memoized component will still re-render when its own state changes or when a c
 Memoizing is used for heavy components.
 
 
+
+Basic React.memo Example
+
+React.memo is used to prevent unnecessary re-renders of a functional component when its props haven’t changed.
+
+Child component (memoized)
+import React from "react";
+
+const Child = React.memo(function Child({ value }) {
+  console.log("Child rendered");
+  return <div>Value: {value}</div>;
+});
+
+export default Child;
+
+Parent component
+import React, { useState } from "react";
+import Child from "./Child";
+
+function Parent() {
+  const [count, setCount] = useState(0);
+  const [text, setText] = useState("");
+
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>
+        Increment Count ({count})
+      </button>
+
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Type something"
+      />
+
+      <Child value={count} />
+    </div>
+  );
+}
+
+export default Parent;
+
+What happens?
+
+Typing in the input re-renders Parent
+
+Child does NOT re-render unless value changes
+
+Clicking the button changes count, so Child re-renders
+
+
+
+
 Example in Atomic Blog project
 
 
@@ -7299,6 +7352,56 @@ When count changes →
 
 
 
+useMemo Example: Expensive Calculation
+import React, { useState, useMemo } from "react";
+
+function slowFactorial(num) {
+  console.log("Calculating factorial...");
+  let result = 1;
+  for (let i = 1; i <= num; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+export default function App() {
+  const [number, setNumber] = useState(5);
+  const [text, setText] = useState("");
+
+  const factorial = useMemo(() => {
+    return slowFactorial(number);
+  }, [number]);
+
+  return (
+    <div>
+      <h2>Factorial: {factorial}</h2>
+
+      <button onClick={() => setNumber(number + 1)}>
+        Increase Number
+      </button>
+
+      <input
+        placeholder="Type here..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </div>
+  );
+}
+
+What this shows
+
+Typing in the input re-renders the component
+
+Factorial does NOT recalculate
+
+Factorial recalculates only when number changes
+
+
+
+
+
+
 
 
 
@@ -7411,6 +7514,134 @@ If you change age → same behavior (child does NOT render again).
 
 
 
+useMemo and useCallback
+
+
+An issue with Memo
+When component instance re-renders everything in that is recreated. So, all values are always created again and that includes objects and functions defined within the component. So, a new render gets new functions and objects even if they are exact same ones as before. I JavaScript two objects or functions that look the same are actually different. 
+An empty object is different from another empty object. So, if objects or functions passed as props the child component will always see them as new props on each re-render. If props are different between re-renders then memo will not work. So, if we memorize a component then we give objects or functions as props then component will always re-render anyway. A solution to this is useMemo and useCallback. useMemo used to memorize values and functions memorize between renders we use useCallback. 
+Values passed into useMemo and useCallback will be stored in memory (cached) and returned in subsequent re-renders as long as dependencies (inputs) stay the same.
+useMemo and useCallback have dependency array and whenever dependencies inside the dependency array in the useMemo and useCallback changes the values will be re-created. When one of the dependencies change the value will no longer be returned from cache but instead will be recreated. Similar to memo where a component gets recreated whenever props changes. In React whenever we dont use useMemo whenever the component re-renders a new value is created. On the other hand when we memorize the value then no new value is created on re-render and the cached value is returned instead. So, value will be stay same and will be stable across renders. But if dependencies in the dependency array changes then new value is actually created as if memorization has never happened.
+
+When to use useMemo and useCallback 
+
+1. useMemo and useCallback are used if props are objects or functions then we can memorize these props (which are objects or functions) inorder to prevent wasted renders.
+2. To avoid expensive recalculations on every render.
+For example a derived state calculated from an array of 100000 items. If a component re-renders all the time then React needs to do this expensive calculation over and over again each time there is a render. To resolve this issue by simply preserve the results of the calculation across renders using useMemo. So, React has not have to calculate each time and time again. 
+3. Memoizing values that are used in dependency array of another hooks. For example: to avoid infinite useEffect loops inorder not to overuse these hooks.
+
+
+useMemo Example: Expensive Calculation
+import React, { useState, useMemo } from "react";
+
+function slowFactorial(num) {
+  console.log("Calculating factorial...");
+  let result = 1;
+  for (let i = 1; i <= num; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+export default function App() {
+  const [number, setNumber] = useState(5);
+  const [text, setText] = useState("");
+
+  const factorial = useMemo(() => {
+    return slowFactorial(number);
+  }, [number]);
+
+  return (
+    <div>
+      <h2>Factorial: {factorial}</h2>
+
+      <button onClick={() => setNumber(number + 1)}>
+        Increase Number
+      </button>
+
+      <input
+        placeholder="Type here..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </div>
+  );
+}
+
+What this shows
+
+Typing in the input re-renders the component
+
+Factorial does NOT recalculate
+
+Factorial recalculates only when number changes
+
+
+
+
+
+What is useCallback?
+
+useCallback memoizes a function, so React keeps the same function reference between renders unless dependencies change.
+
+const memoizedFn = useCallback(() => {
+  // logic
+}, [deps]);
+
+
+Think: “don’t recreate this function unless needed”
+
+Basic useCallback Example (Prevent Child Re-render)
+import React, { useState, useCallback } from "react";
+
+const Child = React.memo(({ onClick }) => {
+  console.log("Child rendered");
+  return <button onClick={onClick}>Child Button</button>;
+});
+
+export default function Parent() {
+  const [count, setCount] = useState(0);
+
+  const handleClick = useCallback(() => {
+    console.log("Clicked");
+  }, []);
+
+  return (
+    <>
+      <button onClick={() => setCount(count + 1)}>
+        Count: {count}
+      </button>
+
+      <Child onClick={handleClick} />
+    </>
+  );
+}
+
+What happens?
+
+Clicking Count → Parent re-renders
+
+handleClick reference stays the same
+
+Child does NOT re-render
+
+Without useCallback, Child would re-render every time.
+
+Example: Function Depends on State
+const handleClick = useCallback(() => {
+  console.log(count);
+}, [count]);
+
+
+🔁 Function is recreated only when count changes
+
+useCallback vs useMemo
+Hook	Memoizes	Used for
+useCallback	Function	Event handlers
+useMemo	Value	Objects, arrays, calculations
+
+
+useMemo stores a result like a value which is the result of callback, but in useCallback the function is memoized. 
 
 
 Redux
@@ -14342,102 +14573,4 @@ export default CreateCabinForm;
 
 
 
-Basic React.memo Example
-
-React.memo is used to prevent unnecessary re-renders of a functional component when its props haven’t changed.
-
-Child component (memoized)
-import React from "react";
-
-const Child = React.memo(function Child({ value }) {
-  console.log("Child rendered");
-  return <div>Value: {value}</div>;
-});
-
-export default Child;
-
-Parent component
-import React, { useState } from "react";
-import Child from "./Child";
-
-function Parent() {
-  const [count, setCount] = useState(0);
-  const [text, setText] = useState("");
-
-  return (
-    <div>
-      <button onClick={() => setCount(count + 1)}>
-        Increment Count ({count})
-      </button>
-
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Type something"
-      />
-
-      <Child value={count} />
-    </div>
-  );
-}
-
-export default Parent;
-
-What happens?
-
-Typing in the input re-renders Parent
-
-Child does NOT re-render unless value changes
-
-Clicking the button changes count, so Child re-renders
-
-
-
-
-
-
-
-useMemo Example: Expensive Calculation
-import React, { useState, useMemo } from "react";
-
-function slowFactorial(num) {
-  console.log("Calculating factorial...");
-  let result = 1;
-  for (let i = 1; i <= num; i++) {
-    result *= i;
-  }
-  return result;
-}
-
-export default function App() {
-  const [number, setNumber] = useState(5);
-  const [text, setText] = useState("");
-
-  const factorial = useMemo(() => {
-    return slowFactorial(number);
-  }, [number]);
-
-  return (
-    <div>
-      <h2>Factorial: {factorial}</h2>
-
-      <button onClick={() => setNumber(number + 1)}>
-        Increase Number
-      </button>
-
-      <input
-        placeholder="Type here..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-    </div>
-  );
-}
-
-What this shows
-
-Typing in the input re-renders the component
-
-Factorial does NOT recalculate
-
-Factorial recalculates only when number changes
+Part 2

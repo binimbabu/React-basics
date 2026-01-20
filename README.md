@@ -14390,3 +14390,54 @@ Typing in the input re-renders Parent
 Child does NOT re-render unless value changes
 
 Clicking the button changes count, so Child re-renders
+
+
+
+
+
+
+
+useMemo Example: Expensive Calculation
+import React, { useState, useMemo } from "react";
+
+function slowFactorial(num) {
+  console.log("Calculating factorial...");
+  let result = 1;
+  for (let i = 1; i <= num; i++) {
+    result *= i;
+  }
+  return result;
+}
+
+export default function App() {
+  const [number, setNumber] = useState(5);
+  const [text, setText] = useState("");
+
+  const factorial = useMemo(() => {
+    return slowFactorial(number);
+  }, [number]);
+
+  return (
+    <div>
+      <h2>Factorial: {factorial}</h2>
+
+      <button onClick={() => setNumber(number + 1)}>
+        Increase Number
+      </button>
+
+      <input
+        placeholder="Type here..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </div>
+  );
+}
+
+What this shows
+
+Typing in the input re-renders the component
+
+Factorial does NOT recalculate
+
+Factorial recalculates only when number changes

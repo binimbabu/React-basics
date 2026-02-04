@@ -14571,3 +14571,168 @@ function onError(errors){
 export default CreateCabinForm;
 
 
+
+
+
+
+
+
+What is useTransition?
+
+useTransition is a React hook that lets you mark non-urgent state updates as low priority.
+
+👉 It keeps the UI responsive while heavy updates are happening.
+
+The mental model
+
+Think in terms of priority:
+
+🔴 Urgent updates → typing, clicking, hovering
+
+🟢 Non-urgent updates → filtering lists, rendering big tables, navigation
+
+useTransition tells React:
+
+“Do this update later, don’t block the UI.”
+
+Basic syntax
+const [isPending, startTransition] = useTransition();
+
+
+startTransition(fn) → wraps low-priority updates
+
+isPending → true while transition is running
+
+Example WITHOUT useTransition (problem)
+function StoreSearch() {
+  const [query, setQuery] = useState('');
+  const [filteredStores, setFilteredStores] = useState(stores);
+
+  const handleChange = (e) => {
+    setQuery(e.target.value);
+
+    // Heavy operation
+    const result = stores.filter(store =>
+      store.name.toLowerCase().includes(e.target.value.toLowerCase())
+    );
+
+    setFilteredStores(result);
+  };
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      <StoreList stores={filteredStores} />
+    </>
+  );
+}
+
+
+❌ Typing feels laggy because filtering blocks rendering.
+
+Same example WITH useTransition (solution)
+import { useState, useTransition } from 'react';
+
+function StoreSearch() {
+  const [query, setQuery] = useState('');
+  const [filteredStores, setFilteredStores] = useState(stores);
+
+  const [isPending, startTransition] = useTransition();
+
+  const handleChange = (e) => {
+    const value = e.target.value;
+
+    // Urgent update (typing must stay fast)
+    setQuery(value);
+
+    // Non-urgent update
+    startTransition(() => {
+      const result = stores.filter(store =>
+        store.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredStores(result);
+    });
+  };
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+
+      {isPending && <span>Filtering...</span>}
+
+      <StoreList stores={filteredStores} />
+    </>
+  );
+}
+
+What changed?
+
+Typing stays smooth
+
+List updates slightly later
+
+UI never freezes
+
+What isPending is for
+{isPending && <span>Filtering...</span>}
+
+
+Use it to:
+
+Show a subtle loading indicator
+
+Dim content
+
+Disable buttons temporarily
+
+❌ Don’t use spinners everywhere
+✅ Use lightweight feedback
+
+Another real-world example: Tabs
+function StoreTabs() {
+  const [tab, setTab] = useState('details');
+  const [isPending, startTransition] = useTransition();
+
+  const handleTabChange = (nextTab) => {
+    startTransition(() => {
+      setTab(nextTab);
+    });
+  };
+
+  return (
+    <>
+      <button onClick={() => handleTabChange('details')}>Details</button>
+      <button onClick={() => handleTabChange('analytics')}>Analytics</button>
+
+      {isPending && <Skeleton />}
+
+      <TabContent tab={tab} />
+    </>
+  );
+}
+
+
+Switching tabs feels instant even if TabContent is heavy.
+
+useTransition vs useEffect
+useTransition	useEffect
+Controls priority	Runs after render
+Improves responsiveness	Doesn’t affect priority
+User interaction focused	Side-effect focused
+
+They solve different problems.
+
+When should you use useTransition?
+
+✅ Filtering large lists
+✅ Rendering heavy components
+✅ Tab switches
+✅ Search-as-you-type
+✅ Navigation in App Router
+
+When NOT to use it
+
+❌ Form inputs
+❌ Validation state
+❌ Auth state
+❌ Anything that must update immediately
